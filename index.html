@@ -12,11 +12,28 @@
         canvas {
             display: block;
         }
+
+        /* ーーー ここから追加：左上の文字のスタイル ーーー */
+        #hud {
+            position: absolute;
+            top: 20px;         /* 画面上部からの余白 */
+            left: 20px;        /* 画面左側からの余白 */
+            color: rgb(77, 61, 61);      /* 文字の色（背景が暗くても見えるように白） */
+            font-family: sans-serif; /* フォントの種類 */
+            font-size: 22px;   /* 文字の大きさ */
+            font-weight: bold; /* 太字 */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8); /* 3D画面で見えやすいように文字の影を追加 */
+            pointer-events: none; /* マウス操作を邪魔しないようにする設定 */
+            z-index: 100;      /* 3Dの画面（canvas）より手前に表示する */
+        }
+        /* ーーー ここまで追加 ーーー */
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 </head>
 <body>
+    <div id="hud"> W (Move Forward), S (Move Backward), A (Left), D (Right),shift(down),enter(up)</div>
+    
     <script src="script.js"></script>
 </body>
 </html>
