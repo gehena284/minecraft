@@ -70,34 +70,48 @@ window.addEventListener('keyup', (e) => {
 
 
 // 5. 描画ループ（アニメーション）の開始
+// 5. 描画ループ（アニメーション）の開始
 function animate() {
   requestAnimationFrame(animate);
 
   if (controls.isLocked) {
-    // --- 【変更】移動前のカメラ位置をバックアップしておく ---
-    const oldPosition = camera.position.clone();
+    // --- 【変更】軸ごとに移動と衝突判定を行う ---
 
-    // 水平方向の移動（視点の向きを基準）
+    // 1. X軸・Z軸（水平方向）の移動と判定
+    const posBeforeHorizontal = camera.position.clone();
+
     if (moveState.forward)  controls.moveForward(moveSpeed);
     if (moveState.backward) controls.moveForward(-moveSpeed);
     if (moveState.left)     controls.moveRight(-moveSpeed);
     if (moveState.right)    controls.moveRight(moveSpeed);
 
-    // 垂直方向の移動（カメラのY座標を直接操作）
-    if (moveState.up)   camera.position.y += moveSpeed;
-    if (moveState.down) camera.position.y -= moveSpeed;
-
-    // --- 【新設】当たり判定のチェック ---
-    // プレイヤー（カメラ）を直径0.6m、高さ1.7m程度の「小さな箱」に見立てて判定用の箱を作る
-    const playerBB = new THREE.Box3(
+    // 水平移動後のプレイヤーのBoundingBoxを作成
+    let playerBB = new THREE.Box3(
       new THREE.Vector3(camera.position.x - 0.3, camera.position.y - 1.7, camera.position.z - 0.3),
       new THREE.Vector3(camera.position.x + 0.3, camera.position.y,       camera.position.z + 0.3)
     );
 
-    // もしプレイヤーの箱と、緑の箱が重なったら（衝突したら）
+    // 水平移動で衝突したら、XとZだけ元の位置に戻す（Yは維持）
     if (playerBB.intersectsBox(boxBB)) {
-      // 移動する前の位置に強制的に引き戻す（＝進めなくなる）
-      camera.position.copy(oldPosition);
+      camera.position.x = posBeforeHorizontal.x;
+      camera.position.z = posBeforeHorizontal.z;
+    }
+
+    // 2. Y軸（垂直方向）の移動と判定
+    const posBeforeVertical = camera.position.clone();
+
+    if (moveState.up)   camera.position.y += moveSpeed;
+    if (moveState.down) camera.position.y -= moveSpeed;
+
+    // 垂直移動後のプレイヤーのBoundingBoxを再計算
+    playerBB.set(
+      new THREE.Vector3(camera.position.x - 0.3, camera.position.y - 1.7, camera.position.z - 0.3),
+      new THREE.Vector3(camera.position.x + 0.3, camera.position.y,       camera.position.z + 0.3)
+    );
+
+    // 垂直移動で衝突したら、Yだけ元の位置に戻す
+    if (playerBB.intersectsBox(boxBB)) {
+      camera.position.y = posBeforeVertical.y;
     }
   }
 
