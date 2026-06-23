@@ -56,7 +56,46 @@ createBox(2, 0, 4);
 createBox(4, 0, 0); 
 createBox(4, 0, 2); 
 createBox(4, 0, 4); 
-
+createBox(0, 0, 6); 
+createBox(2, 0, 6); 
+createBox(4, 0, 6); 
+createBox(6, 0, 6); 
+createBox(6, 0, 4); 
+createBox(6, 0, 2); 
+createBox(6, 0, 0); 
+createBox(0, 0, -2);   //ここから左奥
+createBox(-2, 0, 0,); 
+createBox(-2, 0, -2,); 
+createBox(0, 0, -4); 
+createBox(-2, 0, -4); 
+createBox(-4, 0, 0); 
+createBox(-4, 0, -2); 
+createBox(-4, 0, -4); 
+createBox(0, 0, -6); 
+createBox(-2, 0, -6); 
+createBox(-4, 0, -6); 
+createBox(-6, 0, -6); 
+createBox(-6, 0, -4); 
+createBox(-6, 0, -2); 
+createBox(-6, 0, 0); 
+createBox(-2, 0, 2,);   //ここからは左側
+createBox(-2, 0, 4,);
+createBox(-2, 0, 6,);
+createBox(-4, 0, 2,);
+createBox(-4, 0, 4,);
+createBox(-4, 0, 6,);
+createBox(-6, 0, 2,);
+createBox(-6, 0, 4,);
+createBox(-6, 0, 6,);
+createBox(2, 0, -2,);    //ここから右奥
+createBox(2, 0, -4,);
+createBox(2, 0, -6,);
+createBox(4, 0, -2,);
+createBox(4, 0, -4,);
+createBox(4, 0, -6,);
+createBox(6, 0, -2,);
+createBox(6, 0, -4,);
+createBox(6, 0, -6,);
 
 // --- キーボード移動の制御ロジック ---
 const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false };
@@ -86,49 +125,56 @@ window.addEventListener('keyup', (e) => {
 
 
 // 5. 描画ループ（アニメーション）
+// 5. 描画ループ（アニメーション）
 function animate() {
   requestAnimationFrame(animate);
 
   if (controls.isLocked) {
-    // --- 1. X軸・Z軸（水平方向）の移動と判定 ---
-    const posBeforeHorizontal = camera.position.clone();
+    // プレイヤーのサイズ定義（使い回すためのヘルパー関数）
+    const getPlayerBB = () => {
+      return new THREE.Box3(
+        new THREE.Vector3(camera.position.x - 0.3, camera.position.y - 1.7, camera.position.z - 0.3),
+        new THREE.Vector3(camera.position.x + 0.3, camera.position.y,       camera.position.z + 0.3)
+      );
+    };
 
+    // --- 1. Z軸方向（前後）の移動と判定 ---
+    const posBeforeZ = camera.position.clone();
+    
+    // 前後の移動だけを実行
     if (moveState.forward)  controls.moveForward(moveSpeed);
     if (moveState.backward) controls.moveForward(-moveSpeed);
-    if (moveState.left)     controls.moveRight(-moveSpeed);
-    if (moveState.right)    controls.moveRight(moveSpeed);
-
-    let playerBB = new THREE.Box3(
-      new THREE.Vector3(camera.position.x - 0.3, camera.position.y - 1.7, camera.position.z - 0.3),
-      new THREE.Vector3(camera.position.x + 0.3, camera.position.y,       camera.position.z + 0.3)
-    );
-
-    // ★ 4. 配列内のいずれかの箱と衝突しているかチェック
-    // .some() は配列のどれか1つでも条件（衝突）を満たしたら true を返します
-    const isCollidingHorizontal = obstacleBBs.some(boxBB => playerBB.intersectsBox(boxBB));
-
-    if (isCollidingHorizontal) {
-      camera.position.x = posBeforeHorizontal.x;
-      camera.position.z = posBeforeHorizontal.z;
+    
+    // Z軸移動後の判定。ぶつかっていたらZだけ戻す（Xは維持）
+    if (obstacleBBs.some(boxBB => getPlayerBB().intersectsBox(boxBB))) {
+      camera.position.z = posBeforeZ.z;
+      // moveForwardはカメラの向きによってXも動かすため、厳密にはXも戻す必要がある場合がありますが、
+      // 簡易的には一度座標を完全に戻してから、改めて個別に処理するのが安全です。
+      camera.position.x = posBeforeZ.x; 
     }
 
+    // --- 2. X軸方向（左右）の移動と判定 ---
+    const posBeforeX = camera.position.clone();
+    
+    // 左右の移動だけを実行
+    if (moveState.left)  controls.moveRight(-moveSpeed);
+    if (moveState.right) controls.moveRight(moveSpeed);
+    
+    // X軸移動後の判定。ぶつかっていたらXだけ戻す
+    if (obstacleBBs.some(boxBB => getPlayerBB().intersectsBox(boxBB))) {
+      camera.position.x = posBeforeX.x;
+      camera.position.z = posBeforeX.z;
+    }
 
-    // --- 2. Y軸（垂直方向）の移動と判定 ---
-    const posBeforeVertical = camera.position.clone();
+    // --- 3. Y軸方向（垂直）の移動と判定 ---
+    const posBeforeY = camera.position.clone();
 
     if (moveState.up)   camera.position.y += moveSpeed;
     if (moveState.down) camera.position.y -= moveSpeed;
 
-    playerBB.set(
-      new THREE.Vector3(camera.position.x - 0.3, camera.position.y - 1.7, camera.position.z - 0.3),
-      new THREE.Vector3(camera.position.x + 0.3, camera.position.y,       camera.position.z + 0.3)
-    );
-
-    // ★ 5. 垂直方向も同様に配列内をチェック
-    const isCollidingVertical = obstacleBBs.some(boxBB => playerBB.intersectsBox(boxBB));
-
-    if (isCollidingVertical) {
-      camera.position.y = posBeforeVertical.y;
+    // Y軸移動後の判定
+    if (obstacleBBs.some(boxBB => getPlayerBB().intersectsBox(boxBB))) {
+      camera.position.y = posBeforeY.y;
     }
   }
 
