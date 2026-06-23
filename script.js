@@ -21,30 +21,42 @@ document.body.addEventListener('click', () => {
 
 // --- オブジェクトと光源の配置 ---
 
-// 光源
+// 光源（変更なし）
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
 
-// 目印の箱（位置感覚を掴むため）
-const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
-const boxMaterial = new THREE.MeshStandardMaterial({ color: 0x00FF00 });
-const box = new THREE.Mesh(boxGeometry, boxMaterial);
-box.position.set(0, 1, 0); // 地面の上に置く
-scene.add(box);
+// ★ 1. 衝突対象のバウンディングボックスを格納する配列を作成
+const obstacleBBs = [];
 
-// 【新設】緑の箱の「当たり判定用の箱」を生成
-const boxBB = new THREE.Box3().setFromObject(box);
+// ★ 2. 箱を生成して配列に登録する関数（使い回せるようにする）
+function createBox(x, y, z) {
+  const geometry = new THREE.BoxGeometry(2, 2, 2);
+  const material = new THREE.MeshStandardMaterial({ color: 0x00FF00 });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(x, y, z);
+  scene.add(mesh);
+
+  // この箱の当たり判定を生成して配列に追加
+  const bb = new THREE.Box3().setFromObject(mesh);
+  obstacleBBs.push(bb);
+
+  return mesh;
+}
+
+// ★ 3. 実際にいくつか箱を置いてみる
+createBox(0, 0, 0);   
+createBox(0, 0, 2); 
+createBox(2, 0, 0,); 
+createBox(2, 0, 2,); 
 
 
 // --- キーボード移動の制御ロジック ---
-
 const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false };
-const moveSpeed = 0.1; // 移動速度
+const moveSpeed = 0.1;
 
-// キーを押したとき
 window.addEventListener('keydown', (e) => {
   switch (e.code) {
     case 'KeyW': moveState.forward = true; break;
@@ -56,7 +68,6 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// キーを離したとき
 window.addEventListener('keyup', (e) => {
   switch (e.code) {
     case 'KeyW': moveState.forward = false; break;
@@ -69,15 +80,12 @@ window.addEventListener('keyup', (e) => {
 });
 
 
-// 5. 描画ループ（アニメーション）の開始
-// 5. 描画ループ（アニメーション）の開始
+// 5. 描画ループ（アニメーション）
 function animate() {
   requestAnimationFrame(animate);
 
   if (controls.isLocked) {
-    // --- 【変更】軸ごとに移動と衝突判定を行う ---
-
-    // 1. X軸・Z軸（水平方向）の移動と判定
+    // --- 1. X軸・Z軸（水平方向）の移動と判定 ---
     const posBeforeHorizontal = camera.position.clone();
 
     if (moveState.forward)  controls.moveForward(moveSpeed);
@@ -85,32 +93,36 @@ function animate() {
     if (moveState.left)     controls.moveRight(-moveSpeed);
     if (moveState.right)    controls.moveRight(moveSpeed);
 
-    // 水平移動後のプレイヤーのBoundingBoxを作成
     let playerBB = new THREE.Box3(
       new THREE.Vector3(camera.position.x - 0.3, camera.position.y - 1.7, camera.position.z - 0.3),
       new THREE.Vector3(camera.position.x + 0.3, camera.position.y,       camera.position.z + 0.3)
     );
 
-    // 水平移動で衝突したら、XとZだけ元の位置に戻す（Yは維持）
-    if (playerBB.intersectsBox(boxBB)) {
+    // ★ 4. 配列内のいずれかの箱と衝突しているかチェック
+    // .some() は配列のどれか1つでも条件（衝突）を満たしたら true を返します
+    const isCollidingHorizontal = obstacleBBs.some(boxBB => playerBB.intersectsBox(boxBB));
+
+    if (isCollidingHorizontal) {
       camera.position.x = posBeforeHorizontal.x;
       camera.position.z = posBeforeHorizontal.z;
     }
 
-    // 2. Y軸（垂直方向）の移動と判定
+
+    // --- 2. Y軸（垂直方向）の移動と判定 ---
     const posBeforeVertical = camera.position.clone();
 
     if (moveState.up)   camera.position.y += moveSpeed;
     if (moveState.down) camera.position.y -= moveSpeed;
 
-    // 垂直移動後のプレイヤーのBoundingBoxを再計算
     playerBB.set(
       new THREE.Vector3(camera.position.x - 0.3, camera.position.y - 1.7, camera.position.z - 0.3),
       new THREE.Vector3(camera.position.x + 0.3, camera.position.y,       camera.position.z + 0.3)
     );
 
-    // 垂直移動で衝突したら、Yだけ元の位置に戻す
-    if (playerBB.intersectsBox(boxBB)) {
+    // ★ 5. 垂直方向も同様に配列内をチェック
+    const isCollidingVertical = obstacleBBs.some(boxBB => playerBB.intersectsBox(boxBB));
+
+    if (isCollidingVertical) {
       camera.position.y = posBeforeVertical.y;
     }
   }
@@ -119,7 +131,7 @@ function animate() {
 }
 animate();
 
-// 画面サイズが変更されたときのレスポンシブ対応
+// レスポンシブ対応
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
