@@ -4,7 +4,7 @@ scene.background = new THREE.Color(0x87CEEB); // 空の色
 
 // 2. カメラの作成
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 1.7, 5); // 身長1.7mの高さに設定
+camera.position.set(0, 3, 5); 
 
 // 3. レンダラーの作成
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -21,7 +21,7 @@ document.body.addEventListener('click', () => {
 
 // --- オブジェクトと光源の配置 ---
 
-// 光源（変更なし）
+// 光源
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -51,6 +51,11 @@ createBox(0, 0, 0);
 createBox(0, 0, 2); 
 createBox(2, 0, 0,); 
 createBox(2, 0, 2,); 
+createBox(0, 0, 4); 
+createBox(2, 0, 4); 
+createBox(4, 0, 0); 
+createBox(4, 0, 2); 
+createBox(4, 0, 4); 
 
 
 // --- キーボード移動の制御ロジック ---
