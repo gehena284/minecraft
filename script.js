@@ -28,10 +28,10 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
 directionalLight.position.set(10, 20, 15);
 scene.add(directionalLight);
 
-// ★ 1. 衝突対象のバウンディングボックスを格納する配列を作成
+// 1. 衝突対象のバウンディングボックスを格納する配列を作成
 const obstacleBBs = [];
 
-// ★ 2. 箱を生成して配列に登録する関数（使い回せるようにする）
+// 2. 箱を生成して配列に登録する関数（使い回せるようにする）
 function createBox(x, y, z) {
   const geometry = new THREE.BoxGeometry(2, 2, 2);
   const material = new THREE.MeshStandardMaterial({ color: 0x00FF00 });
@@ -46,7 +46,7 @@ function createBox(x, y, z) {
   return mesh;
 }
 
-// ★ 3. 実際にいくつか箱を置いてみる
+// 3. 箱を置く
 createBox(0, 0, 0);   
 createBox(0, 0, 2); 
 createBox(2, 0, 0,); 
@@ -96,10 +96,16 @@ createBox(4, 0, -6,);
 createBox(6, 0, -2,);
 createBox(6, 0, -4,);
 createBox(6, 0, -6,);
+createBox(6, 2, -6,);   //上にも一個
 
 // --- キーボード移動の制御ロジック ---
 const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false };
 const moveSpeed = 0.1;
+
+const gravity = 0.01;      // 重力
+const jumpPower = 0.25;    // ジャンプ力
+let velocityY = 0;         // Y方向の速度
+let onGround = false;      // 地面にいるか
 
 window.addEventListener('keydown', (e) => {
   switch (e.code) {
@@ -107,8 +113,12 @@ window.addEventListener('keydown', (e) => {
     case 'KeyS': moveState.backward = true; break;
     case 'KeyA': moveState.left = true; break;
     case 'KeyD': moveState.right = true; break;
-    case 'Space': moveState.up = true; break;
-    case 'ShiftLeft': moveState.down = true; break;
+    case 'Space':
+  if (onGround) {
+    velocityY = jumpPower;
+    onGround = false;
+  }
+  break;
   }
 });
 
@@ -118,8 +128,6 @@ window.addEventListener('keyup', (e) => {
     case 'KeyS': moveState.backward = false; break;
     case 'KeyA': moveState.left = false; break;
     case 'KeyD': moveState.right = false; break;
-    case 'Space': moveState.up = false; break;
-    case 'ShiftLeft': moveState.down = false; break;
   }
 });
 
@@ -146,8 +154,8 @@ function animate() {
     // Z軸移動後の判定。ぶつかっていたらZだけ戻す（Xは維持）
     if (obstacleBBs.some(boxBB => getPlayerBB().intersectsBox(boxBB))) {
       camera.position.z = posBeforeZ.z;
-      // moveForwardはカメラの向きによってXも動かすため、厳密にはXも戻す必要がある場合がありますが、
-      // 簡易的には一度座標を完全に戻してから、改めて個別に処理するのが安全です。
+      // moveForwardはカメラの向きによってXも動かすため、厳密にはXも戻す必要がある場合があるが、
+      // 簡易的には一度座標を完全に戻してから、改めて個別に処理するのが安全。
       camera.position.x = posBeforeZ.x; 
     }
 
@@ -164,16 +172,32 @@ function animate() {
       camera.position.z = posBeforeX.z;
     }
 
-    // --- 3. Y軸方向（垂直）の移動と判定 ---
-    const posBeforeY = camera.position.clone();
+// --- 3. Y軸方向（垂直）の移動と判定 ---
 
-    if (moveState.up)   camera.position.y += moveSpeed;
-    if (moveState.down) camera.position.y -= moveSpeed;
+// 移動前の位置を保存
+const posBeforeY = camera.position.clone();
 
-    // Y軸移動後の判定
-    if (obstacleBBs.some(boxBB => getPlayerBB().intersectsBox(boxBB))) {
-      camera.position.y = posBeforeY.y;
+// 重力
+velocityY -= gravity;
+
+// 落下・ジャンプ
+camera.position.y += velocityY;
+
+// 当たり判定
+if (obstacleBBs.some(boxBB => getPlayerBB().intersectsBox(boxBB))) {
+
+    // 落下していたら着地
+    if (velocityY < 0) {
+        onGround = true;
     }
+
+    // 元の高さに戻す
+    camera.position.y = posBeforeY.y;
+    velocityY = 0;
+}
+else {
+    onGround = false;
+}
   }
 
   //奈落の底
