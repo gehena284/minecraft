@@ -123,8 +123,6 @@ window.addEventListener('keyup', (e) => {
   }
 });
 
-
-// 5. 描画ループ（アニメーション）
 // 5. 描画ループ（アニメーション）
 function animate() {
   requestAnimationFrame(animate);
@@ -176,6 +174,11 @@ function animate() {
     if (obstacleBBs.some(boxBB => getPlayerBB().intersectsBox(boxBB))) {
       camera.position.y = posBeforeY.y;
     }
+  }
+
+  //奈落の底
+  if (camera.position.y <-20) {
+camera.position.set(0, 3, 5)
   }
 
   renderer.render(scene, camera);
